@@ -1,0 +1,272 @@
+{
+  "bot_type": "virtualagent",
+  "configuration": {
+    "ai_engine": "PRO",
+    "default_language": "en-US",
+    "kb_ids": [
+      "6866d507ea05c7e2842cd04d"
+    ],
+    "llm_agent_description": "The goal of this AI Assistant is to help users get context-aware IT support by leveraging knowledge documents. It should serve as a self-service hub for IT guidance, learning and troubleshooting.\nIt is specialized in helping Chartwell's enterprise users complete tasks and troubleshoot issues related to the **Chartwell enterprise applications** or the **Chartwell enterprise network** systems and services.\nThe assistant should identify the user’s goal through their query or clarifying questions, then deliver concise, actionable guidance tailored to the specific task and platform.\nIf the user needs to accomplish a specific task, it should provide clear, step-by-step instructions to guide the user through common processes like submitting requests, updating records, or navigating application interfaces.\nIf the user reports an issue, it should help the user diagnose and resolve technical problems across devices, applications, systems, and services.\n\n### INSTRUCTIONS:\n## 1. **Role Definition:**\n  - You are **AYST AI Support**, an assistant specialized in helping Chartwell's enterprise users complete tasks and troubleshoot issues related to the **Chartwell enterprise applications** and the **Chartwell enterprise network** systems and services.\n  - You guide users through documented workflows to help them accomplish their task or fix their technical issue.\n- **Style:**\n  - Clear, calm, and professional. Be supportive and task-focused, slightly conversational.\n  - Address the user by first name during the conversation.\n  - ONLY in your FIRST response include the following disclaimer: \"**Hi! I’m the AYST AI Analyst.** This chat is just between you and AYST, so feel free to ask any technology related question you’d normally search Chartwell resources for or ask AYST about.\nIf I don’t have the answer, I can create an incident for you – fewer clicks and no hold music required. For critical issues, please call AYST as usual.\nAnd please remember not to include any resident or confidential information during your conversation.\"\n\n---\n## 2. Context\n- **Background Information:**\n  - Users perform operational tasks based on official documentation.\n  - Do not mention the use of a knowledge base. \n  - Do not reveal the response source of information like the file name or the page number.\n  - The conversation might contain sensitive information like personal names, statistics figures, event dates, addresses, monetary amounts.\n  \n- **Environment Details:**\n  - Users may access chat while working in enterprise systems.\n- **Conversation Details:**\n  - Retrieve the ConsumerId, SessionId and chatStart of the conversation.\n  - Retrieve the incidentNr when a new incident is open in ServiceNow.\n---\n## 3. Task\n- **Subtasks/Steps:**\n  1. Identify the system, application or task the user needs help with.\n  2. Identify the goal of the user.\n    - If the user needs guidance and instructions on how to perform a task, follow the **Instructional** workflow.\n    - If the user needs help troubleshooting an issue, follow the **Troubleshooting** workflow.\n  3. Execute the Workflow\n  - **Workflows:**\n    - **Instructional Workflow**\n      - Search all knowledge base for documents matching the task scope.\n      - Extract both:  \n        - Steps to complete the task\n        - All documented prerequisites (e.g. task to be completed before, existing records, setup steps)\n      - Clearly list prerequisites first.\n      - Summarize the steps and respond with maximum 3 steps.\n      - Pause every few steps for user confirmation.\n      - Clarify unclear parts as needed.\n      \n    - **Troubleshooting Workflow**\n      - Understand the issue.\n      - Respond based on internal knowledge (without revealing it).\n4. Evaluate the conversation outcome at completion\n  - If successful, invoke the \"Record_Chat_In_SNOW\" action to record the conversation in ServiceNow.\n  - If unsuccessful, apologize, and ask if they want to raise a support ticket. If yes, invoke the \"Open_SNOW_Incident\" action.\n  - DO NOT record the conversation in ServiceNow if a support ticket was raised in the same session.\n  - ALWAYS include the incidentNr in the completion response.\n  - DO NOT offer further assistance.\n  - Advise the user to open a new session by starting a new conversation.\n \n## 4. **Response Guidelines**\n- If the user goal is **Instructional**, follow the **Informational Response Guidelines**\n- If the user goal is **Troubleshooting**, follow the **Troubleshooting Response Guidelines**\n\n  1. **Informational Response Guidelines**\n    - If the user query is too broad or vague (e.g., \"I need some help with my computer\" or \"How to work with CRM\"), retrieve only the main areas of guidance and offer the user 3 most important topics to choose from. Ask targeted follow-up questions to narrow the scope.\n      - Example: “What would you like to do in SAP Concur today? Submit an expense report, add an expense to an existing report or other specific task.”\n    - If prerequisites exist:\n    - **Always** list the prerequisites first, **before** presenting the task completion steps.\n      - Example: “You must have a customer record before generating a quote.”\n\n  2. **Troubleshooting Response Guidelines**\n    - If the user query is too broad or vague (e.g., \"I have an issue with my computer\"), retrieve only the main areas of guidance and offer the user 3 most important topics to choose from. Ask targeted follow-up questions to narrow the scope.\n      - Example: “What seems to be the issue with your computer? Is it a login problem, some application not loading or the network is not accessible?”\n    - When providing multi-step troubleshooting instructions or multiple options, present one step at a time.\n    - Start with the recommended first option. After stating it, ask the user if they have tried that step.\n      - If yes, proceed to the next step.\n      - If no, ask for user's feedback to that step.\n    - Continue this pattern until the issue is resolved or all steps are exhausted. Do not list all steps at once.\n    - When all the steps are exhausted, recommend the user to open a ServiceNow ticket. If the user agrees, invoke the \"Open_SNOW_Incident\" action. Do not open a ticket automatically.\n- **Formatting Rules:**\n  - Use **numbered steps** for procedures.\n  - Use **bullets** for prerequisites.\n\n## 5. Error Handling and Fallbacks\n\n- **Clarification Prompts:**\n  - “Could you specify which application or system you’re using?”\n  \n- **Default Responses:**\n  - “I didn’t catch that. Can you rephrase?”\n  - “That’s outside my support scope. I specialize only in systems and applications used at Chartwell.”\n\n- **Action Failures:**\n  - If unable to answer:\n    - Apologize and offer to open an incident in ServiceNow.\n    - “I’m sorry, I couldn’t find the answer. Would you like to raise a ticket?”\n  - Open a ticket only if the user accepts.\n  - Invoke the \"Open_SNOW_Incident\" action.\n\n---\n## 6. User Defined Guardrails\n\n- **Scope Restriction:**\n  - Redirect off-topic queries:\n    \"I support only Chartwell enterprise systems and applications. Let me know which task you need help with.\"\n- **Sensitive Information Restrictions:**\n  - If the response includes knowledge base retrieved sensitive information like personal names, statistics figures, event dates, addresses or monetary amounts, display ONLY the first letter or number and MASK with # the other characters:\n    - \"User: Give me an example of a prospect information.\n         Agent: The prospect name is J### S#### and his age is 7#.\"\n    - \"The salinity level of the sea is 4#% today.\"\n    - \"The price of the rent is around 7###.## per month.\"\n  - Do NOT mask the sensitive information if it was part of the user input:\n    - \"User: I cannot add the prospect Jamie Vardy in Yardi CRM.\n        Agent: The prospect Jamie Vardy is already present.\"\n- **Enforce Prerequisites:**\n  - Do **not** start task steps until all listed prerequisites from the same source are confirmed.\n\n---\n\n## 7. Example\n\n**User:** I need to create a purchase requisition in Coupa.\n**Agent:** First, you must have an approved cost center.\n\n**User:** All set.\n**Agent:**\n1. Log in to Coupa and go to `Procurement > Requisitions`\n2. Click `Create Requisition`\n3. Enter cost center, supplier, item\n4. Click `Submit`",
+    "llm_model": "1.0.0",
+    "logo": "https://studio.aiagent-us1.cisco.com/static/assets/img/bot-logo/default-virtualagent.svg",
+    "timezone": "America/Toronto",
+    "voice_settings": {
+      "advance_settings": {
+        "global": {
+          "delays_and_interruptions": {
+            "caller_turn_timeout": 1500,
+            "custom_no_input": 10,
+            "customer_interruption": true,
+            "eos_sensitivity": 500,
+            "fulfilment_timeout": 30,
+            "slots_additional_delay": 800
+          },
+          "dtmf_settings": {
+            "max_length": 16,
+            "term_char": "#",
+            "timeout_between_digits": 5,
+            "turn_on_dtmf": true
+          },
+          "is_customized": true,
+          "response_settings": {
+            "custom_vocabulary": [],
+            "include_disfluencies": true,
+            "response_style": "ACTIVE"
+          }
+        }
+      },
+      "voices": [
+        {
+          "displayName": "en-US-Jennifer",
+          "language": "English",
+          "locale": "en-US",
+          "speaking_rate": 1
+        }
+      ]
+    },
+    "welcome_message": "Hello"
+  },
+  "tools": [
+    {
+      "capability": "slot_filling",
+      "description": "Escalate the conversation to a human agent if the user asks for it.",
+      "enabled": true,
+      "fulfillment": {},
+      "id": "9f5e6185aab66e6908acef52b6f881df",
+      "name": "Agent handover",
+      "slots": [],
+      "slots_view": "table",
+      "system_tool": true
+    },
+    {
+      "bot_id": 38321,
+      "capability": "slot_filling_with_fulfillment",
+      "description": "This action will trigger the SNOW_PROD_Open_Incident_Slot1 flow and create a ServiceNow incident for the user with the content of the conversation.",
+      "enabled": true,
+      "fulfillment": {
+        "authentication": {
+          "service_key": "",
+          "type": "ci_bearer_token"
+        },
+        "code": "",
+        "flow_id": 73432,
+        "flow_name": "SNOW_PROD_Open_Incident_Slot1",
+        "output_entities": {
+          "parameters": {
+            "properties": {},
+            "required": [],
+            "type": "object"
+          }
+        },
+        "output_entities_format": "table",
+        "output_entities_text": "",
+        "output_entities_view": "table",
+        "service_id": "37429",
+        "service_name": "AI Agent POV",
+        "type": "flow",
+        "webhook_url": "https://hooks.us.webexconnect.io/flows/73432/trigger/aiagent"
+      },
+      "id": "73a5d9c886a14c799ff97917f20f117d",
+      "input_entities": {
+        "parameters": {
+          "properties": {
+            "ConsumerId": {
+              "description": "This entity represents the consumerId attribute of the user as it is detected during the conversation session. It will be recorded in ServiceNow.",
+              "examples": [],
+              "type": "string"
+            },
+            "Conversation": {
+              "description": "This entity represents the summary of the conversation between the AI agent and the user up to the point where it was agreed to open an incident in ServiceNow. Do not include any user attributes like name, location or customerId in the summary.",
+              "examples": [],
+              "type": "string"
+            },
+            "ConversationScope": {
+              "description": "This entity represents the scope of the troubleshooting session as it emerged from the conversation between the AI agent and the user up to the point where it was agreed to open an incident in ServiceNow. It should be a single word that is either the name of the application the user has an issue with, or a broader description of the troubleshooting scope.",
+              "examples": [
+                "Yardi",
+                "Concur",
+                "Word",
+                "Excel",
+                "Outlook",
+                "computer",
+                "network",
+                "WiFi",
+                "printing",
+                "email"
+              ],
+              "type": "string"
+            },
+            "ConversationScopeCategory": {
+              "description": "This entity represents the category of the conversation scope with the purpose of determining the ServiceNow CMDB CI table. It should have only 2 values, software or hardware.",
+              "examples": [
+                "software",
+                "hardware"
+              ],
+              "type": "string"
+            },
+            "SessionId": {
+              "description": "This entity represents the sessionId attribute of the conversation between the agent the user as it is detected during the conversation. It will be recorded in ServiceNow.",
+              "examples": [],
+              "type": "string"
+            },
+            "chatStart": {
+              "description": "This entity represents the start of the chat between the agent and the user. It will be recorded in ServiceNow.",
+              "examples": [],
+              "type": "string"
+            },
+            "userFullName": {
+              "description": "This entity represents the user full name displayed as first name followed by last name as it was identified during the conversation.",
+              "examples": [],
+              "type": "string"
+            },
+            "useremail": {
+              "description": "This entity represents the email address of the user who is in conversation with the agent.",
+              "examples": [],
+              "type": "string"
+            }
+          },
+          "required": [
+            "chatStart",
+            "ConsumerId",
+            "Conversation",
+            "ConversationScope",
+            "ConversationScopeCategory",
+            "SessionId",
+            "userFullName",
+            "useremail"
+          ],
+          "type": "object"
+        }
+      },
+      "name": "Open_SNOW_Incident",
+      "slots_view": "table",
+      "system_tool": false
+    },
+    {
+      "bot_id": 38321,
+      "capability": "slot_filling_with_fulfillment",
+      "description": "This action will trigger the SNOW_PROD_Save_Chat_Slot1 flow which will create and resolve a ServiceNow incident for the user with the content of the conversation.",
+      "enabled": true,
+      "fulfillment": {
+        "authentication": {
+          "service_key": "",
+          "type": "ci_bearer_token"
+        },
+        "code": "",
+        "flow_id": 73430,
+        "flow_name": "SNOW_PROD_Save_Chat_Slot1",
+        "output_entities": {
+          "parameters": {
+            "properties": {},
+            "required": [],
+            "type": "object"
+          }
+        },
+        "output_entities_format": "table",
+        "output_entities_text": "",
+        "output_entities_view": "table",
+        "service_id": "37429",
+        "service_name": "AI Agent POV",
+        "type": "flow",
+        "webhook_url": "https://hooks.us.webexconnect.io/flows/73430/trigger/aiagent"
+      },
+      "id": "2de425461b4c95cda6d77c3d0fbfd6ee",
+      "input_entities": {
+        "parameters": {
+          "properties": {
+            "ConsumerId": {
+              "description": "This entity represents the consumerId attribute of the user as it is detected during the conversation. It will be recorded in ServiceNow.",
+              "examples": [],
+              "type": "string"
+            },
+            "Conversation": {
+              "description": "This entity represents the content of the conversation between the AI agent and the user which will be documented in an incident in ServiceNow. Do not include any user attributes like name, location or customerId in the summary.",
+              "examples": [],
+              "type": "string"
+            },
+            "ConversationScope": {
+              "description": "This entity represents the scope of the conversation between the AI agent and the user. It should be a single word that is either the name of the application the user needs help with, or a broader description of the conversation scope.",
+              "examples": [
+                "Yardi",
+                "Concur",
+                "M365",
+                "Outlook",
+                "Word",
+                "Excel",
+                "computer",
+                "network",
+                "WiFi",
+                "printing",
+                "email"
+              ],
+              "type": "string"
+            },
+            "ConversationScopeCategory": {
+              "description": "This entity represents the category of the conversation scope as it emerged from the conversation between the AI agent and the user. It will be used to determine the ServiceNow CMDB CI of the incident. It should have only 2 values, software or hardware.",
+              "examples": [
+                "software",
+                "hardware"
+              ],
+              "type": "string"
+            },
+            "SessionId": {
+              "description": "This entity represents the sessionId attribute of the conversation between the agent the user as it is detected during the conversation. It will be recorded in ServiceNow.",
+              "examples": [],
+              "type": "string"
+            },
+            "chatStart": {
+              "description": "This entity represents the start of the chat between the agent and the user. It will be recorded in ServiceNow.",
+              "examples": [],
+              "type": "string"
+            },
+            "userFullName": {
+              "description": "This entity represents the user full name displayed as first name followed by last name as it was identified during the conversation.",
+              "examples": [],
+              "type": "string"
+            },
+            "useremail": {
+              "description": "This entity represents the email address of the user who is in conversation with the agent.",
+              "examples": [],
+              "type": "string"
+            }
+          },
+          "required": [
+            "chatStart",
+            "ConsumerId",
+            "Conversation",
+            "ConversationScope",
+            "ConversationScopeCategory",
+            "SessionId",
+            "userFullName",
+            "useremail"
+          ],
+          "type": "object"
+        }
+      },
+      "name": "Record_Chat_In_SNOW",
+      "slots_view": "table",
+      "system_tool": false
+    }
+  ],
+  "transaction_id": "48e4674d9dea40429b913488726f5403"
+}
